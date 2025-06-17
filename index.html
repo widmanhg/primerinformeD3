@@ -1,39 +1,367 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>Combining D3 Visualizations</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Interactivo D3</title>
   <script src="https://d3js.org/d3.v5.min.js"></script>
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 3rem;
+      color: white;
+    }
+
+    .header h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      text-shadow: 2px 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .header p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+      font-weight: 300;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .visualization-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .visualization-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+    }
+
+    .visualization-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 30px 60px rgba(0,0,0,0.15);
+    }
+
+    .card-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #2d3748;
+    }
+
+    .card-description {
+      font-size: 0.9rem;
+      color: #718096;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .svg-container {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+      border: 2px solid rgba(102, 126, 234, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .svg-container:hover {
+      border-color: rgba(102, 126, 234, 0.3);
+      box-shadow: inset 0 0 20px rgba(102, 126, 234, 0.1);
+    }
+
     svg {
-      margin: 10px;
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .wide-card {
+      grid-column: 1 / -1;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7));
+      backdrop-filter: blur(10px);
+      padding: 1.5rem;
+      border-radius: 16px;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #667eea;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: #718096;
+      margin-top: 0.5rem;
+    }
+
+    .instruction-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      margin-top: 1rem;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(102, 126, 234, 0.3);
+      border-radius: 50%;
+      border-top-color: #667eea;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 0.5rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error-message {
+      background: linear-gradient(135deg, #fed7d7, #feb2b2);
+      color: #c53030;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+      
+      .header h1 {
+        font-size: 2rem;
+      }
+      
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      
+      .visualization-card {
+        padding: 1.5rem;
+      }
     }
   </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Dashboard Interactivo D3</h1>
+      <p>Visualizaciones dinámicas y interactivas con diseño moderno</p>
+    </div>
+
+    <div class="dashboard-grid">
+      <!-- Coordenadas SVG -->
+      <div class="visualization-card">
+        <h3 class="card-title">📍 Coordenadas en Tiempo Real</h3>
+        <p class="card-description">Mueve el cursor sobre el área para ver las coordenadas exactas en píxeles</p>
+        <div class="svg-container">
+          <svg id="coords" width="300" height="250" viewBox="0 0 300 250"></svg>
+        </div>
+        <div class="instruction-badge">Mueve el cursor</div>
+      </div>
+
+      <!-- Drag & Drop -->
+      <div class="visualization-card">
+        <h3 class="card-title">🎯 Drag & Drop Interactivo</h3>
+        <p class="card-description">Arrastra los círculos para moverlos. Experimenta con la interactividad fluida</p>
+        <div class="svg-container">
+          <svg id="dragdrop" width="300" height="200" viewBox="0 0 300 200">
+            <circle cx="75" cy="100" r="20" fill="#667eea" />
+            <circle cx="150" cy="100" r="20" fill="#764ba2" />
+            <circle cx="225" cy="100" r="20" fill="#f093fb" />
+          </svg>
+        </div>
+        <div class="instruction-badge">Arrastra los círculos</div>
+      </div>
+
+      <!-- Brush Interactivo -->
+      <div class="visualization-card wide-card">
+        <h3 class="card-title">🎨 Brush Interactivo Sincronizado</h3>
+        <p class="card-description">Mueve el cursor sobre la primera visualización para ver cómo se sincronizan ambos gráficos</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="svg-container">
+            <svg id="brush1" width="300" height="250" viewBox="0 0 300 250"></svg>
+            <div style="text-align: center; padding: 0.5rem; background: rgba(102, 126, 234, 0.1); margin-top: -1px;">
+              <small style="color: #667eea; font-weight: 500;">Gráfico Principal</small>
+            </div>
+          </div>
+          <div class="svg-container">
+            <svg id="brush2" width="300" height="250" viewBox="0 0 300 250"></svg>
+            <div style="text-align: center; padding: 0.5rem; background: rgba(118, 75, 162, 0.1); margin-top: -1px;">
+              <small style="color: #764ba2; font-weight: 500;">Gráfico Sincronizado</small>
+            </div>
+          </div>
+        </div>
+        <div class="instruction-badge">Mueve el cursor sobre el primer gráfico</div>
+        <div id="brush-error" style="display: none;" class="error-message">
+          <span class="loading-spinner"></span>
+          No se pudo cargar dense.csv. Generando datos de muestra...
+        </div>
+      </div>
+
+      <!-- Animación Stagger -->
+      <div class="visualization-card">
+        <h3 class="card-title">📊 Animación Stagger</h3>
+        <p class="card-description">Haz clic para ver una animación escalonada suave entre dos conjuntos de datos</p>
+        <div class="svg-container">
+          <svg id="stagger" width="300" height="250" viewBox="0 0 300 250"></svg>
+        </div>
+        <div class="instruction-badge">Haz clic para animar</div>
+      </div>
+
+      <!-- Curva de Lissajous -->
+      <div class="visualization-card">
+        <h3 class="card-title">🌀 Curva de Lissajous</h3>
+        <p class="card-description">Una hermosa curva matemática que se dibuja en tiempo real con efectos de desvanecimiento</p>
+        <div class="svg-container">
+          <svg id="lissajous" width="300" height="250" viewBox="0 0 300 250"></svg>
+        </div>
+        <div class="instruction-badge">Animación automática</div>
+      </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-number">5</span>
+        <div class="stat-label">Visualizaciones</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">100%</span>
+        <div class="stat-label">Interactivo</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">D3.js</span>
+        <div class="stat-label">Tecnología</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">✨</span>
+        <div class="stat-label">Diseño Moderno</div>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // Generar datos de muestra para el brush
+    function generateSampleData() {
+      const data = [];
+      for (let i = 0; i < 50; i++) {
+        data.push({
+          A: Math.random() * 280 + 10,
+          B: Math.random() * 230 + 10
+        });
+      }
+      return data;
+    }
+
     function coordsPixels(selector) {
-      var txt = d3.select(selector).append('text');
+      var txt = d3.select(selector).append('text')
+        .attr('font-family', 'Segoe UI, sans-serif')
+        .attr('font-size', '12px')
+        .attr('font-weight', '500')
+        .attr('fill', '#667eea')
+        .attr('text-shadow', '1px 1px 2px rgba(0,0,0,0.1)');
+      
       var svg = d3.select(selector).attr('cursor', 'crosshair')
         .on('mousemove', function() {
           var pt = d3.mouse(svg.node());
           txt.attr('x', 18 + pt[0])
             .attr('y', 6 + pt[1])
-            .text(pt[0] + ',' + pt[1]);
+            .text(`(${Math.round(pt[0])}, ${Math.round(pt[1])})`);
         });
     }
 
     function makeBrush() {
+      // Intentar cargar CSV, si falla usar datos de muestra
       d3.csv("dense.csv").then(function(data) {
-        var svg1 = d3.select("#brush1"),
-            svg2 = d3.select("#brush2");
-
-        var sc1 = d3.scaleLinear().domain([0, 10, 50]).range(["lime", "yellow", "red"]);
-        var sc2 = d3.scaleLinear().domain([0, 10, 50]).range(["lime", "yellow", "blue"]);
-
-        var cs1 = drawCircles(svg1, data, d => d["A"], d => d["B"], sc1);
-        var cs2 = drawCircles(svg2, data, d => d["A"], d => d["B"], sc2);
-
-        installHandlers(svg1, data, cs1, cs2, sc1, sc2);
+        setupBrushVisualization(data);
+      }).catch(function(error) {
+        document.getElementById('brush-error').style.display = 'block';
+        setTimeout(() => {
+          document.getElementById('brush-error').style.display = 'none';
+          const sampleData = generateSampleData();
+          setupBrushVisualization(sampleData);
+        }, 2000);
       });
+    }
+
+    function setupBrushVisualization(data) {
+      var svg1 = d3.select("#brush1"),
+          svg2 = d3.select("#brush2");
+
+      var sc1 = d3.scaleLinear().domain([0, 10, 50]).range(["#4ade80", "#fbbf24", "#ef4444"]);
+      var sc2 = d3.scaleLinear().domain([0, 10, 50]).range(["#4ade80", "#fbbf24", "#3b82f6"]);
+
+      var cs1 = drawCircles(svg1, data, d => d["A"], d => d["B"], sc1);
+      var cs2 = drawCircles(svg2, data, d => d["A"], d => d["B"], sc2);
+
+      installHandlers(svg1, data, cs1, cs2, sc1, sc2);
     }
 
     function drawCircles(svg, data, accX, accY, sc) {
@@ -42,11 +370,13 @@
         .data(data)
         .enter()
         .append("circle")
-        .attr("r", 5)
+        .attr("r", 4)
         .attr("cx", accX)
         .attr("cy", accY)
         .attr("fill", color)
-        .attr("fill-opacity", 0.4);
+        .attr("fill-opacity", 0.7)
+        .attr("stroke", "white")
+        .attr("stroke-width", 1);
     }
 
     function installHandlers(svg, data, cs1, cs2, sc1, sc2) {
@@ -73,18 +403,25 @@
       var drag = d3.drag()
         .on("start", function() {
           color = d3.select(this).attr("fill");
-          widget = d3.select(this).attr("fill", "lime");
+          widget = d3.select(this)
+            .attr("fill", "#f093fb")
+            .attr("r", 25)
+            .style("cursor", "grabbing");
         })
         .on("drag", function() {
-          var pt = d3.mouse(d3.select(this).node());
+          var pt = d3.mouse(d3.select("#dragdrop").node());
           widget.attr("cx", pt[0]).attr("cy", pt[1]);
         })
         .on("end", function() {
-          widget.attr("fill", color);
+          widget.attr("fill", color)
+            .attr("r", 20)
+            .style("cursor", "grab");
           widget = undefined;
         });
 
-      drag(d3.select("#dragdrop").selectAll("circle"));
+      d3.select("#dragdrop").selectAll("circle")
+        .style("cursor", "grab")
+        .call(drag);
     }
 
     function makeStagger() {
@@ -94,20 +431,41 @@
       var mx = d3.max(d3.merge([ds1, ds2]));
       var svg = d3.select("#stagger");
 
-      var scX = d3.scaleLinear().domain([0, n]).range([50, 540]);
-      var scY = d3.scaleLinear().domain([0, mx]).range([250, 50]);
+      var scX = d3.scaleLinear().domain([0, n]).range([30, 270]);
+      var scY = d3.scaleLinear().domain([0, mx]).range([220, 30]);
 
       svg.selectAll("line").data(ds1).enter().append("line")
-        .attr("stroke", "red").attr("stroke-width", 20)
+        .attr("stroke", "url(#gradient)")
+        .attr("stroke-width", 12)
+        .attr("stroke-linecap", "round")
         .attr("x1", (d, i) => scX(i)).attr("y1", scY(0))
         .attr("x2", (d, i) => scX(i)).attr("y2", d => scY(d));
 
-      svg.on("click", function() {
-        [ds1, ds2] = [ds2, ds1];
-        svg.selectAll("line").data(ds1)
-          .transition().duration(1000).delay((d, i) => 200 * i)
-          .attr("y2", d => scY(d));
-      });
+      // Agregar gradiente
+      var defs = svg.append("defs");
+      var gradient = defs.append("linearGradient")
+        .attr("id", "gradient")
+        .attr("x1", "0%").attr("y1", "0%")
+        .attr("x2", "0%").attr("y2", "100%");
+      
+      gradient.append("stop")
+        .attr("offset", "0%")
+        .attr("stop-color", "#667eea");
+      
+      gradient.append("stop")
+        .attr("offset", "100%")
+        .attr("stop-color", "#764ba2");
+
+      svg.style("cursor", "pointer")
+        .on("click", function() {
+          [ds1, ds2] = [ds2, ds1];
+          svg.selectAll("line").data(ds1)
+            .transition()
+            .duration(800)
+            .delay((d, i) => 50 * i)
+            .ease(d3.easeCubicOut)
+            .attr("y2", d => scY(d));
+        });
     }
 
     function makeLissajous() {
@@ -117,13 +475,28 @@
       var crrX = 150 + 100, crrY = 150 + 0;
       var prvX = crrX, prvY = crrY;
 
+      // Agregar gradiente para la curva
+      var defs = svg.append("defs");
+      var gradient = defs.append("linearGradient")
+        .attr("id", "lissajous-gradient")
+        .attr("x1", "0%").attr("y1", "0%")
+        .attr("x2", "100%").attr("y2", "100%");
+      
+      gradient.append("stop")
+        .attr("offset", "0%")
+        .attr("stop-color", "#667eea");
+      
+      gradient.append("stop")
+        .attr("offset", "100%")
+        .attr("stop-color", "#f093fb");
+
       var timer = d3.timer(function(t) {
         phi = omega * t;
         crrX = 150 + 100 * Math.cos(a * phi);
-        crrY = 150 + 100 * Math.sin(b * phi);
+        crrY = 125 + 80 * Math.sin(b * phi);
 
         svg.selectAll("line")
-          .each(function() { this.bogus_opacity *= .99; })
+          .each(function() { this.bogus_opacity *= .995; })
           .attr("stroke-opacity", function() { return this.bogus_opacity; })
           .filter(function() { return this.bogus_opacity < 0.05; })
           .remove();
@@ -132,7 +505,9 @@
           .each(function() { this.bogus_opacity = 1.0; })
           .attr("x1", prvX).attr("y1", prvY)
           .attr("x2", crrX).attr("y2", crrY)
-          .attr("stroke", "green").attr("stroke-width", 2);
+          .attr("stroke", "url(#lissajous-gradient)")
+          .attr("stroke-width", 2)
+          .attr("stroke-linecap", "round");
 
         prvX = crrX;
         prvY = crrY;
@@ -149,26 +524,5 @@
       makeLissajous();
     }
   </script>
-</head>
-<body>
-  <h2>Coordenadas en SVG</h2>
-  <svg id="coords" width="300" height="300" style="background:lightgrey"></svg>
-
-  <h2>Brush Interactivo (requiere dense.csv)</h2>
-  <svg id="brush1" width="300" height="300" style="background:lightgrey"></svg>
-  <svg id="brush2" width="300" height="300" style="background:lightgrey"></svg>
-
-  <h2>Drag & Drop</h2>
-  <svg id="dragdrop" width="600" height="200" style="background:lightgrey">
-    <circle cx="100" cy="100" r="20" fill="red" />
-    <circle cx="300" cy="100" r="20" fill="green" />
-    <circle cx="500" cy="100" r="20" fill="blue" />
-  </svg>
-
-  <h2>Barras Stagger</h2>
-  <svg id="stagger" width="600" height="300" style="background:lightgrey"></svg>
-
-  <h2>Lissajous Curve</h2>
-  <svg id="lissajous" width="300" height="300" style="background:lightgrey"></svg>
 </body>
 </html>
