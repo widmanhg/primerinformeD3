@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mouse Coordinates with D3</title>
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<div>
+  <svg id="coords" width="300" height="300" style="background:lightgrey"></svg>
+</div>
+
+<script>
+(function() {
+  function coordsPixels(selector) {
+    var svg = d3.select(selector).attr('cursor', 'crosshair');
+    var txt = svg.append('text')
+      .attr('fill', 'black')
+      .attr('font-size', '14px')
+      .attr('font-family', 'sans-serif');
+
+    svg.on('mousemove', function(event) {
+      var pt = d3.pointer(event, svg.node());
+      txt.attr('x', 18 + pt[0])
+         .attr('y', 6 + pt[1])
+         .text(Math.round(pt[0]) + ',' + Math.round(pt[1]));
+    });
+  }
+
+  coordsPixels('#coords');
+})();
+</script>
+
+</body>
+</html>
